@@ -1,9 +1,11 @@
 {
-  "name": "puppeteer-extra-lambda",
+  "name": "cavfitness",
   "version": "1.0.0",
-  "description": "A simple example of using puppeteer-extra with AWS Lambda",
+  "description": "Cav fitness scraper",
   "main": "index.js",
   "scripts": {
+    "build": "npx tsc --project tsconfig.json",
+    "run": "node ./dist/index.js",
     "test": "npx ts-node index.ts"
   },
   "author": "Joe Osborne",
