@@ -14,6 +14,7 @@ DKIM_PRIVATE_KEY='-----BEGIN RSA PRIVATE KEY-----\n' +
     'key=\n' +
     '-----END RSA PRIVATE KEY-----';
 EMAIL_PASSWORD='yourpassword'
+EMAIL_ADDRESSES='example@example.com,foo@bar.com'
 
 ```
 
