@@ -16,3 +16,7 @@ DKIM_PRIVATE_KEY='-----BEGIN RSA PRIVATE KEY-----\n' +
 EMAIL_PASSWORD='yourpassword'
 
 ```
+
+## Example
+
+![mission image](mission.png)
