@@ -1,0 +1,25 @@
+{
+  "name": "puppeteer-extra-lambda",
+  "version": "1.0.0",
+  "description": "A simple example of using puppeteer-extra with AWS Lambda",
+  "main": "index.js",
+  "scripts": {
+    "test": "npx ts-node index.ts"
+  },
+  "author": "Joe Osborne",
+  "license": "ISC",
+  "dependencies": {
+    "dotenv": "^16.4.7",
+    "nodemailer": "^6.10.0",
+    "puppeteer": "^22.7.1",
+    "puppeteer-extra": "^3.3.6",
+    "puppeteer-extra-plugin-proxy": "^1.0.2",
+    "puppeteer-extra-plugin-stealth": "^2.11.2",
+    "sharp": "^0.33.5"
+  },
+  "devDependencies": {
+    "@types/node": "^20.12.7",
+    "@types/nodemailer": "^6.4.17",
+    "ts-node": "^10.9.2"
+  }
+}
