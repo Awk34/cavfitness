@@ -7,7 +7,8 @@ require('dotenv').config();
 
 const CAV_MIDDLETOWN_URL = "https://thecavfitness.com/middletown/";
 const HEADLESS = process.env.NODE_ENV === "production";
-const DB_FILE = "db.txt";
+const DB_FILE = "./data/db.txt";
+const MISSION_IMAGE_FILE = "./data/mission.png";
 
 const CSS = `
 .elementor-column, .elementor-widget-wrap, .elementor-widget-heading, body, .entry-content h2, * {
@@ -108,7 +109,7 @@ export const handler = async (): Promise<any> => {
     const resizedImage = image
         .extract({left: 0, top: 15, width: metadata.width!, height: metadata.height! - 15})
         .extend({top: 0, left: 0, bottom: 20, right: 20, background: '#141414'});
-    await resizedImage.toFile('./mission.png');
+    await resizedImage.toFile(MISSION_IMAGE_FILE);
 
     const mailOptions: nodemailer.SendMailOptions = {
       from: 'andrew@andrewk.me',
@@ -116,7 +117,7 @@ export const handler = async (): Promise<any> => {
       // text: weeklyMissionText,
       html: `<img src="cid:mission"/><br><br>${weeklyMissionText.replaceAll(/\n/g, '<br>')}`,
       attachments: [{
-        path: 'mission.png',
+        path: MISSION_IMAGE_FILE,
         cid: 'mission',
       }],
     };
