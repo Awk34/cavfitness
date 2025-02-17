@@ -10,7 +10,7 @@ const HEADLESS = process.env.NODE_ENV === "production";
 const DB_FILE = "db.txt";
 
 const CSS = `
-.elementor-column, .elementor-widget-wrap, .elementor-widget-heading, body, .entry-content h2 {
+.elementor-column, .elementor-widget-wrap, .elementor-widget-heading, body, .entry-content h2, * {
   background: #141414 !important;
   box-shadow: none !important;
 }
