@@ -5,5 +5,5 @@
 /dist
 /.cache
 .DS_Store
-db.txt
+data/db.txt
 .env
