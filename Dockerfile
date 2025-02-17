@@ -1,42 +1,35 @@
-# Define custom function directory
-ARG FUNCTION_DIR="/function"
+ARG APP_DIR="/app"
+ARG DATA_DIR="/app/data"
 
-FROM node:bookworm as build-image
-
-RUN ls -la
-
-RUN cat /etc/os-release
-RUN uname -a
-
-ENV NPM_CONFIG_CACHE=/tmp/.npm3
+FROM node:bookworm-slim AS build-image
 
 # Include global arg in this stage of the build
-ARG FUNCTION_DIR
+ARG APP_DIR
+ARG DATA_DIR
+
+VOLUME ${DATA_DIR}
+RUN mkdir -p ${DATA_DIR}
+RUN ls -halt ${DATA_DIR}
 
 # Install build dependencies
-RUN apt-get update && \
-    apt-get install -y \
-    g++ \
-    make \
+RUN apt update && \
+    apt install -y \
     cmake \
     unzip \
     libcurl4-openssl-dev
 
-# Copy function code
-RUN mkdir -p ${FUNCTION_DIR}
-COPY . ${FUNCTION_DIR}
+# Copy app code
+RUN mkdir -p ${APP_DIR}
+COPY ./dist ${APP_DIR}
 
-WORKDIR ${FUNCTION_DIR}
-
-RUN pwd
-RUN ls -la
+WORKDIR ${APP_DIR}
 
 RUN npm install
 
 RUN npx puppeteer browsers install chrome
 
 # Install some extra dependencies
-RUN apt-get install -y \
+RUN apt install -y \
     libnss3 libnss3-dev \
     libnspr4 libnspr4-dev \
     libdbus-1-3 \
@@ -77,8 +70,5 @@ RUN apt-get install -y \
     wget \
     xdg-utils
 
-RUN pwd
-RUN ls -la
-
 # Set runtime interface client as default command for the container runtime
-ENTRYPOINT ["/usr/local/bin/npm", "test"]
+ENTRYPOINT ["node", "index.js"]
