@@ -1,7 +1,7 @@
 # Cav Fitness Scraper
 
 This script scrapes the weekly mission from https://thecavfitness.com/middletown/
-so I don't have to look it up every week manually.
+so that I don't have to look it up every week manually.
 
 ## Testing locally
 
@@ -15,9 +15,9 @@ DKIM_PRIVATE_KEY='-----BEGIN RSA PRIVATE KEY-----\n' +
     '-----END RSA PRIVATE KEY-----';
 EMAIL_PASSWORD='yourpassword'
 EMAIL_ADDRESSES='example@example.com,foo@bar.com'
-
+DRY_RUN=true
 ```
 
 ## Example
 
-![mission image](mission.png)
+![mission image](data/mission.png)
