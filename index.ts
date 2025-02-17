@@ -9,6 +9,9 @@ const CAV_MIDDLETOWN_URL = "https://thecavfitness.com/middletown/";
 const HEADLESS = process.env.NODE_ENV === "production";
 const DB_FILE = "./data/db.txt";
 const MISSION_IMAGE_FILE = "./data/mission.png";
+const MY_EMAIL = "koroluka@gmail.com";
+const FROM_EMAIL = "andrew@andrewk.me";
+const DRY_RUN = !!process.env.DRY_RUN || false;
 
 const CSS = `
 .elementor-column, .elementor-widget-wrap, .elementor-widget-heading, body, .entry-content h2, * {
@@ -112,10 +115,10 @@ export const handler = async (): Promise<any> => {
     await resizedImage.toFile(MISSION_IMAGE_FILE);
 
     const mailOptions: nodemailer.SendMailOptions = {
-      from: 'andrew@andrewk.me',
+      from: FROM_EMAIL,
       subject: `The Cav Middletown weekly mission ${missionMondayFullDate}`,
       // text: weeklyMissionText,
-      html: `<img src="cid:mission"/><br><br>${weeklyMissionText.replaceAll(/\n/g, '<br>')}`,
+      html: `<img src="cid:mission" alt="weekly mission"/><br><br>${weeklyMissionText.replaceAll(/\n/g, '<br>')}`,
       attachments: [{
         path: MISSION_IMAGE_FILE,
         cid: 'mission',
@@ -125,81 +128,149 @@ export const handler = async (): Promise<any> => {
       // comma separated or array
       mailOptions.bcc = process.env.EMAIL_ADDRESSES;
     } else {
-      mailOptions.to = 'koroluka@gmail.com';
+      mailOptions.to = MY_EMAIL;
     }
 
-    if (process.env.NODE_ENV == 'production') {
-      try {
-        // Try to access file
-        console.log(`Access ${DB_FILE}`);
-        await access(DB_FILE);
-      } catch (err) {
-        // if can't access file try to create it (empty)
-        try {
-          console.log(`Couldn't access ${DB_FILE}, try to write it`);
-          await writeFile(DB_FILE, '');
-        } catch (err) {
-          // if can't create it SOMETHING HAS GONE TERRIBLY WRONG
-          console.log(`Couldn't write ${DB_FILE}, I will now die`);
-          console.error(err);
-          process.exit(1);
-        }
-      }
+    await dbFileInit();
 
-      // Read lines from DB file
-      const file = await readFile(DB_FILE, { encoding: 'utf8' });
-      const lines = file.split('\n');
+    // If the last line in the DB file is different from the mission the script just grabbed
+    let missionIsDifferent: boolean;
 
-      // If the last line in the DB file is different from the mission the script just grabbed
-      let missionIsDifferent: boolean;
+    try {
+      const dbFileLastDate = await getDbFileLastDate();
 
-      // DB file has data
-      if (lines.length > 1) {
-        // last line of file should be empty line
-        const lastDate = lines[lines.length - 2];
-        const fullDateRegexp = /\d{2}\/\d{2}\/\d{4}/;
-        const lastDateValid = fullDateRegexp.test(lastDate);
-
-        // Make sure the last date pulled is properly formatted
-        if (lastDateValid) {
-          // Whether the last line in the DB file is different from the mission the script just grabbed
-          missionIsDifferent = lastDate !== missionMondayFullDate;
-          console.log(`Compare ${lastDate} to ${missionMondayFullDate}. Result: ${missionIsDifferent ? 'different' : 'same'}`);
-        } else {
-          console.error(`Last date in ${DB_FILE} is not valid, continuing...`);
-          missionIsDifferent = false;
-        }
-      } else {
-        // else DB file has no data, mission is always different from null
-        console.log(`${DB_FILE} is empty`);
+      if (!dbFileLastDate) {
+        // DB file last line had parse error, treat date as different
         missionIsDifferent = true;
+      } else {
+        // Whether the last line in the DB file is different from the mission the script just grabbed
+        missionIsDifferent = dbFileLastDate !== missionMondayFullDate;
+        console.log(`Compare ${dbFileLastDate} to ${missionMondayFullDate}. Result: ${missionIsDifferent ? 'different' : 'same'}`);
+      }
+    } catch (e) {
+      console.error(`Last date in ${DB_FILE} is not valid, continuing...`);
+      missionIsDifferent = false;
+    }
+
+    if (missionIsDifferent) {
+      // New mission, send email
+
+      if (process.env.NODE_ENV !== 'production') {
+        console.log('Not production, will not send email');
+        return;
+      }
+      if (DRY_RUN) {
+        console.log('Dry run, will not send email');
+        return;
       }
 
-      if (missionIsDifferent) {
-        // New mission, send email
+      try {
+        await sendEmail(mailOptions);
 
-        try {
-          const response = await mailTransporter.sendMail(mailOptions);
-          console.log(response);
-
-          console.log(`Email sending success, appending current mission start date to ${DB_FILE}`);
-          await appendFile(DB_FILE, missionMondayFullDate + '\n');
-        } catch (e) {
-          console.error(e);
-        }
+        await updateDbFile(missionMondayFullDate);
+      } catch (e) {
+        console.error(e);
       }
     }
 
     if (!HEADLESS) {
-      await new Promise((resolve) => setTimeout(resolve, 1000));
+      // If not running headless, show the browser for 5s before closing
+      await new Promise((resolve) => setTimeout(resolve, 5000));
     }
 
     await browser.close();
   } catch (e) {
-    console.log("Error in Lambda Handler:", e);
+    console.log("Error:", e);
     return e;
   }
 };
+
+async function dbFileInit() {
+  try {
+    // Try to access file
+    console.log(`Access ${DB_FILE}`);
+    await access(DB_FILE);
+  } catch (err) {
+    // if can't access file try to create it (empty)
+    console.log(`Couldn't access ${DB_FILE}, try to write it`);
+
+    if (process.env.NODE_ENV !== 'production') {
+      console.log('Not production, will not write to DB file');
+      return;
+    }
+    if (DRY_RUN) {
+      console.log('Dry run, will not write to DB file');
+      return;
+    }
+
+    try {
+      await writeFile(DB_FILE, '');
+      console.log('Wrote log file');
+    } catch (err) {
+      // if can't create it SOMETHING HAS GONE TERRIBLY WRONG
+      console.log(`Couldn't write ${DB_FILE}, I will now die`);
+      console.error(err);
+      process.exit(1);
+    }
+  }
+}
+
+/**
+ * Get the last date in the DB file
+ * @returns the last date in the file
+ *   OR undefined if the file is empty
+ *   OR throws if the last date in the file has a parsing error
+ */
+async function getDbFileLastDate() {
+  // Read lines from DB file
+  const file = await readFile(DB_FILE, { encoding: 'utf8' });
+  const lines = file.split('\n');
+
+  // DB file has data
+  if (lines.length > 1) {
+    // last line of file should be empty line
+    const lastDate = lines[lines.length - 2];
+    const fullDateRegexp = /\d{2}\/\d{2}\/\d{4}/;
+    const lastDateValid = fullDateRegexp.test(lastDate);
+
+    // Make sure the last date pulled is properly formatted
+    if (lastDateValid) {
+      return lastDate;
+    } else {
+      throw new Error(`Last date in ${DB_FILE} is not valid`);
+    }
+  } else {
+    // else DB file has no data, mission is always different from null
+    console.log(`${DB_FILE} is empty`);
+  }
+}
+
+async function sendEmail(mailOptions: nodemailer.SendMailOptions) {
+  try {
+    const response = await mailTransporter.sendMail(mailOptions);
+    console.log(response);
+
+    console.log('Email sending success');
+  } catch (e) {
+    console.error('Email sending failed');
+    console.error(e);
+  }
+}
+
+async function updateDbFile(missionMondayFullDate: string) {
+  console.log(`Appending current mission start date to db file`);
+  await appendFile(DB_FILE, missionMondayFullDate + '\n');
+}
+
+function getTimestampDate() {
+  return new Date().toISOString()
+      .replace(/T/, ' ')
+      .replace(/\..+/, '');
+}
+
+function log(message?: any, ...args: any[]) {
+  console.log(`[${getTimestampDate}] ${message}`, ...args);
+}
 
 // Test - npx ts-node index.ts
 (async () => {
