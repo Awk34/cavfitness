@@ -4,7 +4,7 @@
   "description": "Cav fitness scraper",
   "main": "index.js",
   "scripts": {
-    "build": "npx tsc --project tsconfig.json",
+    "build": "npx tsc --project tsconfig.json && cp package*.json ./dist",
     "run": "node ./dist/index.js",
     "test": "npx ts-node index.ts"
   },
