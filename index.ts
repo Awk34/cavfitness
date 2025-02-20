@@ -11,7 +11,9 @@ const DB_FILE = "./data/db.txt";
 const MISSION_IMAGE_FILE = "./data/mission.png";
 const MY_EMAIL = "koroluka@gmail.com";
 const FROM_EMAIL = "andrew@andrewk.me";
-const DRY_RUN = !!process.env.DRY_RUN || false;
+const DRY_RUN = process.env.DRY_RUN === "false"
+    ? false
+    : (!!process.env.DRY_RUN || false);
 
 const CSS = `
 .elementor-column, .elementor-widget-wrap, .elementor-widget-heading, body, .entry-content h2, * {
