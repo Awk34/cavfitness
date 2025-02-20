@@ -3,8 +3,6 @@ name: Test and Build
 on: [push]
 
 env:
-  DOCKER_IMAGE_NAME: cavfitness
-  DOCKER_REGISTRY_URL: ghcr.io/awk34
   REGISTRY: ghcr.io
   IMAGE_NAME: ${{ github.repository }}
 
