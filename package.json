@@ -5,6 +5,7 @@
   "main": "index.js",
   "scripts": {
     "build": "npx tsc --project tsconfig.json && cp package*.json ./dist",
+    "clean": "rm -rf ./dist",
     "run": "node ./dist/index.js",
     "test": "npx ts-node index.ts"
   },
