@@ -1,5 +1,5 @@
-import { Browser, Page, PuppeteerLaunchOptions } from "puppeteer";
-import { PuppeteerExtra } from "puppeteer-extra";
+import {Browser, Page, PuppeteerLaunchOptions} from "puppeteer";
+import {PuppeteerExtra} from "puppeteer-extra";
 import * as sharp from "sharp";
 import * as nodemailer from "nodemailer";
 import {access, appendFile, readFile, writeFile} from "node:fs/promises";
@@ -14,7 +14,9 @@ const MY_EMAIL = "koroluka@gmail.com";
 const FROM_EMAIL = "andrew@andrewk.me";
 const DRY_RUN = process.env.DRY_RUN === "false"
     ? false
-    : (!!process.env.DRY_RUN || false);
+    : !!process.env.DRY_RUN;
+const KEEPALIVE = !!process.env.KEEPALIVE;
+const KEEPALIVE_INTERVAL_MINUTES = parseInt(process.env.KEEPALIVE_INTERVAL_MINUTES || '15', 10) || 15;
 
 const CSS = `
 .elementor-column, .elementor-widget-wrap, .elementor-widget-heading, body, .entry-content h2, * {
@@ -25,23 +27,6 @@ const CSS = `
   color: white;
 }
 `;
-
-const mailTransporter = nodemailer.createTransport({
-  host: 'mail.privateemail.com',
-  port: 465,
-  secure: true,
-  auth: {
-    user: 'andrew@andrewk.me',
-    pass: process.env.EMAIL_PASSWORD,
-  },
-  dkim: process.env.DKIM_PRIVATE_KEY ? {
-    domainName: 'andrewk.me',
-    keySelector: 'default',
-    privateKey: process.env.DKIM_PRIVATE_KEY,
-  } : undefined,
-  logger: true, // Enable logging
-  debug: true // Enable debug output
-});
 
 export const handler = async (): Promise<any> => {
   try {
@@ -310,11 +295,22 @@ function log(message?: any, ...args: any[]) {
   console.log(`[${getTimestampDate}] ${message}`, ...args);
 }
 
-// Test - npx ts-node index.ts
-(async () => {
-  try {
-    await handler();
-  } catch (e) {
-    console.log("Error in handler:", e);
-  }
-})();
+if (KEEPALIVE) {
+  // Keep process alive and run the handler every X minutes
+  setInterval((async () => {
+    try {
+      await handler();
+    } catch (e) {
+      console.log("Error in handler:", e);
+    }
+  }), KEEPALIVE_INTERVAL_MINUTES * (60 * 1000));
+} else {
+  // Run once then exit
+  (async () => {
+    try {
+      await handler();
+    } catch (e) {
+      console.log("Error in handler:", e);
+    }
+  })();
+}
