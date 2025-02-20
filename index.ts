@@ -9,6 +9,7 @@ const CAV_MIDDLETOWN_URL = "https://thecavfitness.com/middletown/";
 const HEADLESS = process.env.NODE_ENV === "production";
 const DB_FILE = "./data/db.txt";
 const MISSION_IMAGE_FILE = "./data/mission.png";
+const DKIM_PRIVATE_KEY_FILE = "./data/dkim.txt";
 const MY_EMAIL = "koroluka@gmail.com";
 const FROM_EMAIL = "andrew@andrewk.me";
 const DRY_RUN = process.env.DRY_RUN === "false"
@@ -47,6 +48,32 @@ export const handler = async (): Promise<any> => {
     const puppeteer: PuppeteerExtra = require("puppeteer-extra");
     const stealthPlugin = require("puppeteer-extra-plugin-stealth");
     puppeteer.use(stealthPlugin());
+
+    let dkimPrivateKey = process.env.DKIM_PRIVATE_KEY;
+    if (!dkimPrivateKey) {
+      try {
+        dkimPrivateKey = await readDkimKeyFile();
+      } catch (err) {
+        console.error('Couldn\'t read from DKIM key file');
+      }
+    }
+
+    const mailTransporter = nodemailer.createTransport({
+      host: 'mail.privateemail.com',
+      port: 465,
+      secure: true,
+      auth: {
+        user: 'andrew@andrewk.me',
+        pass: process.env.EMAIL_PASSWORD,
+      },
+      dkim: dkimPrivateKey ? {
+        domainName: 'andrewk.me',
+        keySelector: 'default',
+        privateKey: dkimPrivateKey,
+      } : undefined,
+      logger: true, // Enable logging
+      debug: true // Enable debug output
+    });
 
     const launchOptions: PuppeteerLaunchOptions = HEADLESS
       ? {
@@ -167,7 +194,7 @@ export const handler = async (): Promise<any> => {
       }
 
       try {
-        await sendEmail(mailOptions);
+        await sendEmail(mailTransporter, mailOptions);
 
         await updateDbFile(missionMondayFullDate);
       } catch (e) {
@@ -247,7 +274,16 @@ async function getDbFileLastDate() {
   }
 }
 
-async function sendEmail(mailOptions: nodemailer.SendMailOptions) {
+/**
+ * Get the DKIM private key from a file if present
+ */
+async function readDkimKeyFile() {
+  // Read lines from DB file
+  console.log(`Read content of ${DKIM_PRIVATE_KEY_FILE}`);
+  return (await readFile(DKIM_PRIVATE_KEY_FILE, {encoding: 'utf8'})).trim();
+}
+
+async function sendEmail(mailTransporter: nodemailer.Transporter, mailOptions: nodemailer.SendMailOptions) {
   try {
     const response = await mailTransporter.sendMail(mailOptions);
     console.log(response);
