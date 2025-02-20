@@ -11,13 +11,6 @@ VOLUME ${DATA_DIR}
 RUN mkdir -p ${DATA_DIR}
 RUN ls -halt ${DATA_DIR}
 
-# Install build dependencies
-RUN apt update && \
-    apt install -y \
-    cmake \
-    unzip \
-    libcurl4-openssl-dev
-
 # Copy app code
 RUN mkdir -p ${APP_DIR}
 COPY ./dist ${APP_DIR}
@@ -28,7 +21,8 @@ RUN npm install
 
 RUN npx puppeteer browsers install chrome
 
-# Install some extra dependencies
+# Install build dependencies
+RUN apt update && \
 RUN apt install -y \
     libnss3 libnss3-dev \
     libnspr4 libnspr4-dev \
