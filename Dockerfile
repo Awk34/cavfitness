@@ -17,7 +17,7 @@ COPY ./dist ${APP_DIR}
 
 WORKDIR ${APP_DIR}
 
-RUN npm install
+RUN npm ci --omit dev
 
 RUN npx puppeteer browsers install chrome
 
