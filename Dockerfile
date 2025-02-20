@@ -23,7 +23,9 @@ RUN npx puppeteer browsers install chrome
 
 # Install build dependencies
 RUN apt update && \
-RUN apt install -y \
+    apt install -y \
+    ca-certificates \
+    fonts-liberation \
     libnss3 libnss3-dev \
     libnspr4 libnspr4-dev \
     libdbus-1-3 \
@@ -38,8 +40,6 @@ RUN apt install -y \
     libxrandr2 \
     libgbm1 \
     libasound2 \
-    ca-certificates \
-    fonts-liberation \
     libappindicator3-1 \
     libc6 \
     libcairo2 \
