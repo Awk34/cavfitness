@@ -297,20 +297,23 @@ function log(message?: any, ...args: any[]) {
 
 if (KEEPALIVE) {
   // Keep process alive and run the handler every X minutes
-  setInterval((async () => {
-    try {
-      await handler();
-    } catch (e) {
-      console.log("Error in handler:", e);
-    }
-  }), KEEPALIVE_INTERVAL_MINUTES * (60 * 1000));
+  log(`Keepalive true. Rerunning every ${KEEPALIVE_INTERVAL_MINUTES} minutes.`);
+
+  // Run at startup once, then begin interval wait
+  main().then(() => {
+    setInterval((async () => {
+      await main();
+    }), KEEPALIVE_INTERVAL_MINUTES * (60 * 1000));
+  });
 } else {
   // Run once then exit
-  (async () => {
-    try {
-      await handler();
-    } catch (e) {
-      console.log("Error in handler:", e);
-    }
-  })();
+  main();
+}
+
+async function main() {
+  try {
+    await handler();
+  } catch (e) {
+    console.log("Error in handler:", e);
+  }
 }
