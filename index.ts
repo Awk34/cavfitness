@@ -28,6 +28,34 @@ const CSS = `
 }
 `;
 
+// Convert text month name to text month number
+const monthMap = new Map([
+  ["Jan", "01"],
+  ["Feb", "02"],
+  ["Mar", "03"],
+  ["Apr", "04"],
+  ["May", "05"],
+  ["Jun", "06"],
+  ["Jul", "07"],
+  ["Aug", "08"],
+  ["Sep", "09"],
+  ["Oct", "10"],
+  ["Nov", "11"],
+  ["Dec", "12"],
+  ["January", "01"],
+  ["February", "02"],
+  ["March", "03"],
+  ["April", "04"],
+  ["May", "05"],
+  ["June", "06"],
+  ["July", "07"],
+  ["August", "08"],
+  ["September", "09"],
+  ["October", "10"],
+  ["November", "11"],
+  ["December", "12"],
+]);
+
 export const handler = async (): Promise<any> => {
   try {
     const puppeteer: PuppeteerExtra = require("puppeteer-extra");
@@ -114,13 +142,38 @@ export const handler = async (): Promise<any> => {
 
     const weekText = weeklyMissionText!.split('\n')[1];
     const weekTextRegexp = /\((\d{2}\/\d{2}) - (\d{2}\/\d{2})\)/;
-    const execResult = weekTextRegexp.exec(weekText)!;
-    const weekStart = execResult[1];
+    const weekTextExecResult = weekTextRegexp.exec(weekText)!;
+
+    let weekStart: string;
+
+    if (weekTextExecResult) {
+      weekStart = weekTextExecResult[1];
+    } else {
+      // 01/01 - 01/08 didn't match
+      // Try May 12 - May 17 format
+      const weekTextRegexp2 = /([a-z]+)\s(\d{2}) [-–֊־] ([a-z]+)\s(\d{2})/i;
+      const weekTextExecResult2 = weekTextRegexp2.exec(weekText);
+
+      if (!weekTextExecResult2 || weekTextExecResult2.length !== 5) {
+        throw new Error(`Neither date scheme matched: "${weekText}"`);
+      }
+
+      weekStart = `${monthMap.get(weekTextExecResult2[1])}/${weekTextExecResult2[2]}`;
+
+      if (weekStart.length !== 5) {
+        throw new Error(`Name date scheme didn't match: "${weekText}"`);
+      }
+    }
+
     const currentYear = new Date().getFullYear();
     const missionMondayFullDate = `${weekStart}/${currentYear}`;
     console.log(`Mission's full start date: ${missionMondayFullDate}`);
 
-    const image = sharp(await weeklyMissionDiv.screenshot());
+    const image = sharp(await weeklyMissionDiv.screenshot({
+      omitBackground: true,
+      optimizeForSpeed: true,
+      captureBeyondViewport: true,
+    }));
     const metadata = await image.metadata();
 
     const resizedImage = image
