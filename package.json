@@ -1,6 +1,6 @@
 {
   "name": "cavfitness",
-  "version": "1.0.0",
+  "version": "2.0.0",
   "description": "Cav fitness scraper",
   "main": "index.js",
   "scripts": {
@@ -9,7 +9,7 @@
     "run": "node ./dist/index.js",
     "test": "npx ts-node index.ts"
   },
-  "author": "Joe Osborne",
+  "author": "Andrew Koroluk",
   "license": "ISC",
   "dependencies": {
     "dotenv": "^16.4.7",
