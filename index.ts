@@ -151,7 +151,7 @@ export const handler = async (): Promise<any> => {
     } else {
       // 01/01 - 01/08 didn't match
       // Try May 12 - May 17 format
-      const weekTextRegexp2 = /([a-z]+)\s(\d{2}) [-–֊־] ([a-z]+)\s(\d{2})/i;
+      const weekTextRegexp2 = /([a-z]+)\s(\d{1,2}) [-–֊־] ([a-z]+)\s(\d{1,2})/i;
       const weekTextExecResult2 = weekTextRegexp2.exec(weekText);
 
       if (!weekTextExecResult2 || weekTextExecResult2.length !== 5) {
