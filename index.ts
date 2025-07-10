@@ -348,7 +348,7 @@ function getTimestampDate() {
 }
 
 function log(message?: any, ...args: any[]) {
-  console.log(`[${getTimestampDate}] ${message}`, ...args);
+  console.log(`[${getTimestampDate()}] ${message}`, ...args);
 }
 
 if (KEEPALIVE) {
