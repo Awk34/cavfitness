@@ -18,7 +18,7 @@ const DRY_RUN = process.env.DRY_RUN === "false"
 const KEEPALIVE = !!process.env.KEEPALIVE;
 const KEEPALIVE_INTERVAL_MINUTES = parseInt(process.env.KEEPALIVE_INTERVAL_MINUTES || '15', 10) || 15;
 
-const VERSION = require("../package.json").version;
+const VERSION = require("./package.json").version;
 console.info(`cavfitness version number ${VERSION}`);
 
 const CSS = `
