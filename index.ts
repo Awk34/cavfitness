@@ -49,7 +49,6 @@ const monthMap = new Map([
   ["February", "02"],
   ["March", "03"],
   ["April", "04"],
-  ["May", "05"],
   ["June", "06"],
   ["July", "07"],
   ["August", "08"],
@@ -164,7 +163,7 @@ export const handler = async (): Promise<any> => {
       weekStart = `${monthMap.get(weekTextExecResult2[1])}/${weekTextExecResult2[2]}`;
 
       if (weekStart.length !== 5) {
-        throw new Error(`Name date scheme didn't match: "${weekText}"`);
+        throw new Error(`Name date scheme (${weekStart}) didn't match: "${weekText}"`);
       }
     }
 
