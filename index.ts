@@ -356,7 +356,7 @@ async function main() {
 
 function weekTextToWeek(weekText: string): Week {
   const weekTextRegexp = /\((\d{1,2})\/(\d{1,2}) - (\d{1,2})\/(\d{1,2})\)/;
-  const weekTextRegexp2 = /([a-z]+)\s(\d{1,2}) [-–֊־] ([a-z]+)\s(\d{1,2})/i;
+  const weekTextRegexp2 = /([a-z]+)\s(\d{1,2})(?:th)? [-–֊־] ([a-z]+)\s(\d{1,2})(?:th)?/i;
   const weekTextExecResult = weekTextRegexp.exec(weekText)!;
 
   let weekStart: string;
