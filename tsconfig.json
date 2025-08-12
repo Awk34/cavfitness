@@ -6,7 +6,7 @@
     "preserveConstEnums": true,
     "sourceMap": true,
     "outDir": "./dist",
-    "rootDir": "./",
+    "rootDir": "./src",
     "strict": true,
     "target": "es2022",
     "strictPropertyInitialization": false,
