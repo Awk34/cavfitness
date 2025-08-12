@@ -24,19 +24,6 @@ const KEEPALIVE_INTERVAL_MINUTES = parseInt(process.env.KEEPALIVE_INTERVAL_MINUT
 const VERSION = require("../package.json").version;
 console.info(`cavfitness version number ${VERSION}`);
 
-const CSS = `
-.elementor-column, .elementor-widget-wrap, .elementor-widget-heading, body, .entry-content h2, * {
-  background: #141414 !important;
-  box-shadow: none !important;
-}
-.elementor-widget-heading > div > h2 {
-  color: white;
-}
-.elementor-location-header {
-  visibility: hidden;
-}
-`;
-
 async function setupPuppeteer(): Promise<{ browser: Browser, page: Page }> {
     const puppeteer: PuppeteerExtra = require("puppeteer-extra");
     const stealthPlugin = require("puppeteer-extra-plugin-stealth");
@@ -68,8 +55,6 @@ async function setupPuppeteer(): Promise<{ browser: Browser, page: Page }> {
     await page.emulateMediaFeatures([
         {name: 'prefers-color-scheme', value: 'dark'},
     ]);
-    await page.goto(CAV_MIDDLETOWN_URL);
-    await page.addStyleTag({content: CSS});
 
     if (!HEADLESS) {
         await new Promise((resolve) => setTimeout(resolve, 500));
@@ -213,6 +198,10 @@ export const handler = async (): Promise<any> => {
 
         const dkimPrivateKey = await getDkimPrivateKey();
         const mailTransporter = await setupMailTransporter(dkimPrivateKey);
+
+        await page.goto(CAV_MIDDLETOWN_URL);
+        const CSS = await readFile('./src/styles.css', 'utf8');
+        await page.addStyleTag({content: CSS});
 
         const {weeklyMissionText, missionMondayFullDate} = await extractMissionDetails(page);
 

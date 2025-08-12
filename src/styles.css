@@ -1,0 +1,10 @@
+.elementor-column, .elementor-widget-wrap, .elementor-widget-heading, body, .entry-content h2, * {
+    background: #141414 !important;
+    box-shadow: none !important;
+}
+.elementor-widget-heading > div > h2 {
+    color: white;
+}
+.elementor-location-header {
+    visibility: hidden;
+}
