@@ -6,7 +6,8 @@ import {access, appendFile, readFile, writeFile} from "node:fs/promises";
 require('dotenv').config();
 
 const CAV_MIDDLETOWN_URL = "https://thecavfitness.com/middletown/";
-const HEADLESS = process.env.NODE_ENV === "production";
+const PRODUCTION = process.env.NODE_ENV === "production";
+const HEADLESS = PRODUCTION;
 const DB_FILE = "./data/db.txt";
 const MISSION_IMAGE_FILE = "./data/mission.png";
 const DKIM_PRIVATE_KEY_FILE = "./data/dkim.txt";
@@ -90,7 +91,7 @@ export const handler = async (): Promise<any> => {
         privateKey: dkimPrivateKey,
       } : undefined,
       logger: true, // Enable logging
-      debug: true // Enable debug output
+      debug: !PRODUCTION // Enable debug output
     });
 
     const launchOptions: PuppeteerLaunchOptions = HEADLESS
