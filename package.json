@@ -7,7 +7,8 @@
     "build": "npx tsc --project tsconfig.json && cp package*.json ./dist",
     "clean": "rm -rf ./dist",
     "run": "node ./dist/index.js",
-    "test": "npx ts-node index.ts"
+    "run-test": "npx ts-node src/index.ts",
+    "test": "jest"
   },
   "author": "Andrew Koroluk",
   "license": "ISC",
@@ -21,8 +22,11 @@
     "sharp": "^0.33.5"
   },
   "devDependencies": {
+    "@jest/globals": "^30.0.5",
     "@types/node": "^20.12.7",
     "@types/nodemailer": "^6.4.17",
+    "jest": "^30.0.5",
+    "ts-jest": "^29.4.1",
     "ts-node": "^10.9.2"
   }
 }
