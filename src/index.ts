@@ -13,8 +13,11 @@ const HEADLESS = PRODUCTION;
 const DB_FILE = "./data/db.txt";
 const MISSION_IMAGE_FILE = "./data/mission.png";
 const DKIM_PRIVATE_KEY_FILE = "./data/dkim.txt";
-const MY_EMAIL = "koroluka@gmail.com";
-const FROM_EMAIL = "andrew@andrewk.me";
+
+// encode in b64 to try to avoid getting scraped on GH
+const MY_EMAIL = Buffer.from("a29yb2x1a2FAZ21haWwuY29t", 'base64').toString('ascii');
+const FROM_EMAIL = Buffer.from("YW5kcmV3QGFuZHJld2subWU=", 'base64').toString('ascii');
+
 const DRY_RUN = process.env.DRY_RUN === "false"
     ? false
     : !!process.env.DRY_RUN;
