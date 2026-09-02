@@ -113,8 +113,7 @@ async function extractMissionDetails(page: Page): Promise<{ weeklyMissionText: s
     ) || '';
     console.log(weeklyMissionText);
 
-    const weekText = weeklyMissionText!.split('\n')[1];
-    const week = weekTextToWeek(weekText);
+    const week = weekTextToWeek(weeklyMissionText);
 
     const currentYear = new Date().getFullYear();
     const missionMondayFullDate = `${week.getStartDateString()}/${currentYear}`;
@@ -202,7 +201,7 @@ export const handler = async (): Promise<any> => {
         const dkimPrivateKey = await getDkimPrivateKey();
         const mailTransporter = await setupMailTransporter(dkimPrivateKey);
 
-        await page.goto(CAV_MIDDLETOWN_URL);
+        await page.goto(CAV_MIDDLETOWN_URL, { waitUntil: 'domcontentloaded', timeout: 60000 });
         const CSS = await readFile('./src/styles.css', 'utf8');
         await page.addStyleTag({content: CSS});
 

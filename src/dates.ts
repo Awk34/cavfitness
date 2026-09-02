@@ -1,37 +1,44 @@
-import {assertExists} from "./util";
-
-const weekTextRegexp = /(\d{1,2})\/(\d{1,2}) [-–֊-־] (\d{1,2})\/(\d{1,2})/;
-const weekTextRegexp2 = /([a-z]+)\s(\d{1,2})(?:th)? [-–֊-־] ([a-z]+)\s(\d{1,2})(?:th)?/i;
+const DASHES = '[-–—―֊־~−]';
+const weekTextNumericRegexp = new RegExp(`(\\d{1,2})\\/(\\d{1,2})\\s*${DASHES}\\s*(\\d{1,2})\\/(\\d{1,2})`);
+const weekTextTwoMonthsRegexp = new RegExp(`([a-z]+)\\.?\\s*(\\d{1,2})(?:st|nd|rd|th)?\\s*${DASHES}\\s*([a-z]+)\\.?\\s*(\\d{1,2})(?:st|nd|rd|th)?`, 'i');
+const weekTextOneMonthRegexp = new RegExp(`([a-z]+)\\.?\\s*(\\d{1,2})(?:st|nd|rd|th)?\\s*${DASHES}\\s*(\\d{1,2})(?:st|nd|rd|th)?`, 'i');
 
 export function weekTextToWeek(weekText: string): Week {
-    const weekTextExecResult = weekTextRegexp.exec(weekText)!;
-
-    if (weekTextExecResult) {
-        let startMonth: Month = parseInt(weekTextExecResult[1], 10) as Month;
-        let startDay = parseInt(weekTextExecResult[2], 10);
-        let endMonth: Month = parseInt(weekTextExecResult[3], 10) as Month;
-        let endDay = parseInt(weekTextExecResult[4], 10);
-
-        return new Week(startMonth, startDay, endMonth, endDay);
-    } else {
-        // 01/01 - 01/08 didn't match
-        // Try May 12 - May 17 format
-        const weekTextExecResult2 = weekTextRegexp2.exec(weekText);
-
-        if (!weekTextExecResult2) {
-            throw new Error(`Neither date scheme matched: "${weekText}"`);
-        }
-
-        let startMonth = monthEnumMap.get(weekTextExecResult2[1]);
-        let startDay = parseInt(weekTextExecResult2[2], 10);
-        let endMonth = monthEnumMap.get(weekTextExecResult2[3]);
-        let endDay = parseInt(weekTextExecResult2[4], 10);
-
-        assertExists(startMonth);
-        assertExists(endMonth);
+    const numericMatch = weekTextNumericRegexp.exec(weekText);
+    if (numericMatch) {
+        const startMonth: Month = parseInt(numericMatch[1], 10) as Month;
+        const startDay = parseInt(numericMatch[2], 10);
+        const endMonth: Month = parseInt(numericMatch[3], 10) as Month;
+        const endDay = parseInt(numericMatch[4], 10);
 
         return new Week(startMonth, startDay, endMonth, endDay);
     }
+
+    const twoMonthsMatch = weekTextTwoMonthsRegexp.exec(weekText);
+    if (twoMonthsMatch) {
+        const startMonth = monthEnumMap.get(twoMonthsMatch[1].toLowerCase());
+        const startDay = parseInt(twoMonthsMatch[2], 10);
+        const endMonth = monthEnumMap.get(twoMonthsMatch[3].toLowerCase());
+        const endDay = parseInt(twoMonthsMatch[4], 10);
+
+        if (startMonth && endMonth) {
+            return new Week(startMonth, startDay, endMonth, endDay);
+        }
+    }
+
+    const oneMonthMatch = weekTextOneMonthRegexp.exec(weekText);
+    if (oneMonthMatch) {
+        const startMonth = monthEnumMap.get(oneMonthMatch[1].toLowerCase());
+        const startDay = parseInt(oneMonthMatch[2], 10);
+        const endMonth = startMonth;
+        const endDay = parseInt(oneMonthMatch[3], 10);
+
+        if (startMonth && endMonth) {
+            return new Week(startMonth, startDay, endMonth, endDay);
+        }
+    }
+
+    throw new Error(`Neither date scheme matched: "${weekText}"`);
 }
 
 export class Week {
@@ -78,30 +85,29 @@ export enum Month {
 }
 
 // Convert text month name to enum
-const monthEnumMap = new Map([
-    ["Jan", Month.January],
-    ["Feb", Month.February],
-    ["Mar", Month.March],
-    ["Apr", Month.April],
-    ["May", Month.May],
-    ["Jun", Month.June],
-    ["Jul", Month.July],
-    ["Aug", Month.August],
-    ["Sep", Month.September],
-    ["Oct", Month.October],
-    ["Nov", Month.November],
-    ["Dec", Month.December],
-
-    ["January", Month.January],
-    ["February", Month.February],
-    ["March", Month.March],
-    ["April", Month.April],
-    // ["May", Month.May],
-    ["June", Month.June],
-    ["July", Month.July],
-    ["August", Month.August],
-    ["September", Month.September],
-    ["October", Month.October],
-    ["November", Month.November],
-    ["December", Month.December],
+const monthEnumMap = new Map<string, Month>([
+    ["jan", Month.January],
+    ["january", Month.January],
+    ["feb", Month.February],
+    ["february", Month.February],
+    ["mar", Month.March],
+    ["march", Month.March],
+    ["apr", Month.April],
+    ["april", Month.April],
+    ["may", Month.May],
+    ["jun", Month.June],
+    ["june", Month.June],
+    ["jul", Month.July],
+    ["july", Month.July],
+    ["aug", Month.August],
+    ["august", Month.August],
+    ["sep", Month.September],
+    ["sept", Month.September],
+    ["september", Month.September],
+    ["oct", Month.October],
+    ["october", Month.October],
+    ["nov", Month.November],
+    ["november", Month.November],
+    ["dec", Month.December],
+    ["december", Month.December],
 ]);
