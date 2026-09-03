@@ -286,8 +286,15 @@ export const handler = async (): Promise<any> => {
       waitUntil: "domcontentloaded",
       timeout: 60000,
     });
-    const CSS = await readFile("./src/styles.css", "utf8");
-    await page.addStyleTag({ content: CSS });
+    const cssPath = [
+      path.join(__dirname, "styles.css"),
+      path.join(__dirname, "../src/styles.css"),
+      path.join(process.cwd(), "src/styles.css"),
+    ].find((p) => fs.existsSync(p));
+    const CSS = cssPath ? await readFile(cssPath, "utf8") : "";
+    if (CSS) {
+      await page.addStyleTag({ content: CSS });
+    }
 
     const { weeklyMissionText, missionMondayFullDate } =
       await extractMissionDetails(page);

@@ -44,6 +44,7 @@ RUN apt update && \
     libxss1 \
     libxtst6 \
     lsb-release \
+    unzip \
     wget \
     xdg-utils && \
     rm -rf /var/lib/apt/lists/*
@@ -57,11 +58,22 @@ COPY ./dist ${APP_DIR}
 
 WORKDIR ${APP_DIR}
 
+ENV CI=true
+ENV PNPM_CONF_CONFIRM_MODULES_PURGE=false
+
 RUN npm install -g pnpm@11.24.0
 RUN pnpm install --prod --frozen-lockfile
 
-# Ensure browser is cleanly installed
-RUN rm -rf /root/.cache/puppeteer && pnpm exec puppeteer browsers install chrome
+# Ensure browser is cleanly installed, fully unpacked, and verified
+RUN rm -rf /root/.cache/puppeteer && \
+    pnpm exec puppeteer browsers install chrome && \
+    ARCHIVE=$(find /root/.cache/puppeteer -name "*chrome-linux64.zip" | head -n 1) && \
+    if [ -f "$ARCHIVE" ]; then \
+      TARGET_DIR=$(find /root/.cache/puppeteer -type d -name "linux-*" | head -n 1) && \
+      unzip -o "$ARCHIVE" -d "$TARGET_DIR" && \
+      rm -f "$ARCHIVE"; \
+    fi && \
+    node -e "const p = require('puppeteer'); const fs = require('fs'); const ep = p.executablePath(); if (!fs.existsSync(ep)) throw new Error('Chrome binary not found at ' + ep); console.log('Successfully verified Chrome binary at ' + ep);"
 
 # Set runtime interface client as default command for the container runtime
 ENTRYPOINT ["node", "index.js"]

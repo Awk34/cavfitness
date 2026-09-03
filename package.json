@@ -1,11 +1,11 @@
 {
   "name": "cavfitness",
-  "version": "2.0.8",
+  "version": "2.0.9",
   "description": "Cav fitness scraper",
   "main": "index.js",
   "packageManager": "pnpm@11.24.0",
   "scripts": {
-    "build": "tsc --project tsconfig.json && cp package.json pnpm-lock.yaml pnpm-workspace.yaml ./dist",
+    "build": "tsc --project tsconfig.json && cp src/styles.css package.json pnpm-lock.yaml pnpm-workspace.yaml ./dist",
     "clean": "rm -rf ./dist",
     "run": "node ./dist/index.js",
     "run-test": "ts-node src/index.ts",
