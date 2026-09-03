@@ -7,23 +7,9 @@ FROM node:bookworm-slim AS build-image
 ARG APP_DIR
 ARG DATA_DIR
 
-VOLUME ${DATA_DIR}
-RUN mkdir -p ${DATA_DIR}
-RUN ls -halt ${DATA_DIR}
-
-# Copy app code
-RUN mkdir -p ${APP_DIR}
-COPY ./dist ${APP_DIR}
-
-WORKDIR ${APP_DIR}
-
-RUN npm ci --omit dev
-
-RUN npx puppeteer browsers install chrome
-
-# Install build dependencies
+# Install build & browser dependencies first (cached across builds)
 RUN apt update && \
-    apt install -y \
+    apt install -y --no-install-recommends \
     ca-certificates \
     fonts-liberation \
     libnss3 libnss3-dev \
@@ -52,17 +38,30 @@ RUN apt update && \
     libstdc++6 \
     libx11-6 libx11-xcb1 libxcb1 \
     libxcursor1 \
-    libxdamage1 \
     libxext6 \
-    libxfixes3 \
     libxi6 \
-    libxrandr2 \
     libxrender1 \
     libxss1 \
     libxtst6 \
     lsb-release \
     wget \
-    xdg-utils
+    xdg-utils && \
+    rm -rf /var/lib/apt/lists/*
+
+VOLUME ${DATA_DIR}
+RUN mkdir -p ${DATA_DIR}
+
+# Copy app code
+RUN mkdir -p ${APP_DIR}
+COPY ./dist ${APP_DIR}
+
+WORKDIR ${APP_DIR}
+
+RUN npm install -g pnpm@11.24.0
+RUN pnpm install --prod --frozen-lockfile
+
+# Ensure browser is cleanly installed
+RUN rm -rf /root/.cache/puppeteer && pnpm exec puppeteer browsers install chrome
 
 # Set runtime interface client as default command for the container runtime
 ENTRYPOINT ["node", "index.js"]

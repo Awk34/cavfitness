@@ -1,6 +1,8 @@
+import * as path from "path";
+import * as fs from "fs";
 import { Browser, Page, PuppeteerLaunchOptions } from "puppeteer";
 import { PuppeteerExtra } from "puppeteer-extra";
-import * as sharp from "sharp";
+import sharp from "sharp";
 import * as nodemailer from "nodemailer";
 import { access, appendFile, readFile, writeFile } from "node:fs/promises";
 import { weekTextToWeek } from "./dates";
@@ -29,7 +31,12 @@ const KEEPALIVE = !!process.env.KEEPALIVE;
 const KEEPALIVE_INTERVAL_MINUTES =
   parseInt(process.env.KEEPALIVE_INTERVAL_MINUTES || "15", 10) || 15;
 
-const VERSION = require("../package.json").version;
+const pkgPath = [
+  path.join(__dirname, "package.json"),
+  path.join(__dirname, "../package.json"),
+].find((p) => fs.existsSync(p));
+
+export const VERSION = pkgPath ? require(pkgPath).version : "unknown";
 console.info(`cavfitness version number ${VERSION}`);
 
 async function setupPuppeteer(): Promise<{ browser: Browser; page: Page }> {
@@ -410,16 +417,18 @@ async function main() {
   }
 }
 
-if (KEEPALIVE) {
-  log(`Keepalive true. Rerunning every ${KEEPALIVE_INTERVAL_MINUTES} minutes.`);
-  main().then(() => {
-    setInterval(
-      async () => {
-        await main();
-      },
-      KEEPALIVE_INTERVAL_MINUTES * (60 * 1000),
-    );
-  });
-} else {
-  main();
+if (require.main === module) {
+  if (KEEPALIVE) {
+    log(`Keepalive true. Rerunning every ${KEEPALIVE_INTERVAL_MINUTES} minutes.`);
+    main().then(() => {
+      setInterval(
+        async () => {
+          await main();
+        },
+        KEEPALIVE_INTERVAL_MINUTES * (60 * 1000),
+      );
+    });
+  } else {
+    main();
+  }
 }

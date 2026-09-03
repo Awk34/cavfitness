@@ -1,14 +1,17 @@
 {
   "name": "cavfitness",
-  "version": "2.0.7",
+  "version": "2.0.8",
   "description": "Cav fitness scraper",
   "main": "index.js",
+  "packageManager": "pnpm@11.24.0",
   "scripts": {
-    "build": "npx tsc --project tsconfig.json && cp package*.json ./dist",
+    "build": "tsc --project tsconfig.json && cp package.json pnpm-lock.yaml pnpm-workspace.yaml ./dist",
     "clean": "rm -rf ./dist",
     "run": "node ./dist/index.js",
-    "run-test": "npx ts-node src/index.ts",
-    "test": "jest"
+    "run-test": "ts-node src/index.ts",
+    "smoke-test": "node -e \"const { VERSION } = require('./dist/index.js'); if (!VERSION || VERSION === 'unknown') throw new Error('Invalid version'); console.log('Smoke test passed. Version:', VERSION);\"",
+    "test": "jest",
+    "test:all": "jest && npm run build && npm run smoke-test"
   },
   "author": "Andrew Koroluk",
   "license": "ISC",
@@ -27,6 +30,7 @@
     "@types/nodemailer": "^6.4.17",
     "jest": "^30.0.5",
     "ts-jest": "^29.4.1",
-    "ts-node": "^10.9.2"
+    "ts-node": "^10.9.2",
+    "typescript": "^5.7.3"
   }
 }
