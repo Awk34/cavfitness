@@ -15,8 +15,8 @@ jobs:
       - uses: pnpm/action-setup@v4
       - uses: actions/setup-node@v4
         with:
-          node-version: '22.x'
-          cache: 'pnpm'
+          node-version: "22.x"
+          cache: "pnpm"
       - run: pnpm install --frozen-lockfile
       - run: pnpm test
 
@@ -29,11 +29,10 @@ jobs:
       - uses: pnpm/action-setup@v4
       - uses: actions/setup-node@v4
         with:
-          node-version: '22.x'
-          cache: 'pnpm'
+          node-version: "22.x"
+          cache: "pnpm"
       - run: pnpm install --frozen-lockfile
       - run: pnpm run build
-      - run: pnpm run smoke-test
       - name: Upload dist build artifact
         uses: actions/upload-artifact@v4
         with:
@@ -79,7 +78,19 @@ jobs:
           name: dist
           path: ./dist
 
-      - name: Build and push Docker image
+      - name: Build and load Docker image for smoke test
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          load: true
+          tags: cavfitness:test
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      - name: Run smoke test on Docker image
+        run: docker run --rm -e NODE_ENV=production -e DRY_RUN=true cavfitness:test
+
+      - name: Push Docker image
         id: push
         uses: docker/build-push-action@v6
         with:

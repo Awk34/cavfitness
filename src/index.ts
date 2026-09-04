@@ -418,9 +418,15 @@ function log(message?: any, ...args: any[]) {
 
 async function main() {
   try {
-    await handler();
+    const result = await handler();
+    if (result instanceof Error) {
+      throw result;
+    }
   } catch (e) {
     console.log("Error in handler:", e);
+    if (!KEEPALIVE) {
+      process.exit(1);
+    }
   }
 }
 

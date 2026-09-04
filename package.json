@@ -9,9 +9,9 @@
     "clean": "rm -rf ./dist",
     "run": "node ./dist/index.js",
     "run-test": "ts-node src/index.ts",
-    "smoke-test": "node -e \"const { VERSION } = require('./dist/index.js'); if (!VERSION || VERSION === 'unknown') throw new Error('Invalid version'); console.log('Smoke test passed. Version:', VERSION);\"",
+    "smoke-test": "docker run --rm -e NODE_ENV=production -e DRY_RUN=true ${DOCKER_IMAGE:-cavfitness:latest}",
     "test": "jest",
-    "test:all": "jest && npm run build && npm run smoke-test"
+    "test:all": "jest && pnpm run build && pnpm run smoke-test"
   },
   "author": "Andrew Koroluk",
   "license": "ISC",
