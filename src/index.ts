@@ -147,16 +147,13 @@ async function extractMissionDetails(
       captureBeyondViewport: true,
     }),
   );
-  const metadata = await image.metadata();
-
-  const resizedImage = image
-    .extract({
-      left: 0,
-      top: 15,
-      width: metadata.width!,
-      height: metadata.height! - 15,
-    })
-    .extend({ top: 20, left: 0, bottom: 20, right: 20, background: "#141414" });
+  const resizedImage = image.extend({
+    top: 20,
+    left: 0,
+    bottom: 20,
+    right: 20,
+    background: "#141414",
+  });
   await resizedImage.toFile(MISSION_IMAGE_FILE);
 
   return { weeklyMissionText, missionMondayFullDate };

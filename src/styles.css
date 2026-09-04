@@ -5,6 +5,11 @@
 .elementor-widget-heading > div > h2 {
     color: white;
 }
-.elementor-location-header {
-    visibility: hidden;
+.elementor-location-header,
+.elementor-sticky,
+.elementor-sticky--active {
+    display: none !important;
+}
+.elementor-widget-container {
+    border: none !important;
 }
