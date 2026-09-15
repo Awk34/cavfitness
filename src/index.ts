@@ -30,6 +30,32 @@ const DRY_RUN = process.env.DRY_RUN === "false" ? false : !!process.env.DRY_RUN;
 const KEEPALIVE = !!process.env.KEEPALIVE;
 const KEEPALIVE_INTERVAL_MINUTES =
   parseInt(process.env.KEEPALIVE_INTERVAL_MINUTES || "15", 10) || 15;
+import {
+  createErrorMailOptions,
+  ERROR_ALERT_COOLDOWN_HOURS,
+  ERROR_ALERT_THRESHOLD,
+  ErrorKind,
+  errorState,
+  ErrorTrackingState,
+  getErrorKind,
+  isTransientError,
+  recordFailure,
+  recordSuccess,
+} from "./errors";
+
+export {
+  createErrorMailOptions,
+  ERROR_ALERT_COOLDOWN_HOURS,
+  ERROR_ALERT_THRESHOLD,
+  ErrorKind,
+  errorState,
+  ErrorTrackingState,
+  getErrorKind,
+  isTransientError,
+  recordFailure,
+  recordSuccess,
+};
+
 
 const pkgPath = [
   path.join(__dirname, "package.json"),
@@ -184,25 +210,10 @@ function createMailOptions(
   return mailOptions;
 }
 
-function createErrorMailOptions(error: unknown): nodemailer.SendMailOptions {
-  const errorMessage = error instanceof Error ? error.message : String(error);
-  const errorStack = error instanceof Error ? error.stack : "";
-
-  return {
-    from: FROM_EMAIL,
-    to: MY_EMAIL,
-    subject: `[Cav Fitness Error] Weekly mission failed - ${errorMessage}`,
-    html: `
-            <h2>Cav Fitness Scraper Error</h2>
-            <p><strong>Timestamp:</strong> ${new Date().toISOString()}</p>
-            <p><strong>Error:</strong> ${errorMessage}</p>
-            ${errorStack ? `<pre style="background: #f4f4f4; padding: 12px; border-radius: 4px; overflow-x: auto; font-family: monospace;">${errorStack}</pre>` : ""}
-        `,
-  };
-}
-
 async function sendErrorEmail(
   error: unknown,
+  consecutiveFailures: number = 1,
+  errorKind: ErrorKind = "critical",
   mailTransporter?: nodemailer.Transporter,
 ): Promise<void> {
   if (process.env.NODE_ENV !== "production") {
@@ -221,7 +232,12 @@ async function sendErrorEmail(
       transporter = await setupMailTransporter(dkimPrivateKey);
     }
 
-    const errorMailOptions = createErrorMailOptions(error);
+    const errorMailOptions = createErrorMailOptions(
+      error,
+      consecutiveFailures,
+      errorKind,
+      { from: FROM_EMAIL, to: MY_EMAIL },
+    );
     await transporter.sendMail(errorMailOptions);
     console.log("Error notification email sent successfully");
   } catch (mailError) {
@@ -279,10 +295,25 @@ export const handler = async (): Promise<any> => {
     const { browser: b, page } = await setupPuppeteer();
     browser = b;
 
-    await page.goto(CAV_MIDDLETOWN_URL, {
-      waitUntil: "domcontentloaded",
-      timeout: 60000,
-    });
+    const maxNavAttempts = 2;
+    for (let attempt = 1; attempt <= maxNavAttempts; attempt++) {
+      try {
+        await page.goto(CAV_MIDDLETOWN_URL, {
+          waitUntil: "domcontentloaded",
+          timeout: 60000,
+        });
+        break;
+      } catch (navError) {
+        if (attempt === maxNavAttempts) {
+          throw navError;
+        }
+        console.warn(
+          `Navigation attempt ${attempt} failed, retrying in 5s...`,
+          navError instanceof Error ? navError.message : navError,
+        );
+        await new Promise((resolve) => setTimeout(resolve, 5000));
+      }
+    }
     const cssPath = [
       path.join(__dirname, "styles.css"),
       path.join(__dirname, "../src/styles.css"),
@@ -306,9 +337,13 @@ export const handler = async (): Promise<any> => {
       mailOptions,
       missionMondayFullDate,
     );
+    recordSuccess();
   } catch (e) {
     console.log("Error:", e);
-    await sendErrorEmail(e, mailTransporter);
+    const { shouldAlert, consecutiveFailures, errorKind } = recordFailure(e);
+    if (shouldAlert) {
+      await sendErrorEmail(e, consecutiveFailures, errorKind, mailTransporter);
+    }
     return e;
   } finally {
     if (browser) {
