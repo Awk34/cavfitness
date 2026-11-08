@@ -1,7 +1,8 @@
 const DASHES = '[-–—―֊־~−]';
+const MONTH_NAMES = '(?:jan(?:uary)?|feb(?:ruary)?|mar(?:ch)?|apr(?:il)?|may|jun(?:e)?|jul(?:y)?|aug(?:ust)?|sep(?:t(?:ember)?)?|oct(?:ober)?|nov(?:ember)?|dec(?:ember)?)';
 const weekTextNumericRegexp = new RegExp(`(\\d{1,2})\\/(\\d{1,2})\\s*${DASHES}\\s*(\\d{1,2})\\/(\\d{1,2})`);
-const weekTextTwoMonthsRegexp = new RegExp(`([a-z]+)\\.?\\s*(\\d{1,2})(?:st|nd|rd|th)?\\s*${DASHES}\\s*([a-z]+)\\.?\\s*(\\d{1,2})(?:st|nd|rd|th)?`, 'i');
-const weekTextOneMonthRegexp = new RegExp(`([a-z]+)\\.?\\s*(\\d{1,2})(?:st|nd|rd|th)?\\s*${DASHES}\\s*(\\d{1,2})(?:st|nd|rd|th)?`, 'i');
+const weekTextTwoMonthsRegexp = new RegExp(`(${MONTH_NAMES})\\.?\\s*(\\d{1,2})(?:st|nd|rd|th)?\\s*${DASHES}\\s*(${MONTH_NAMES})\\.?\\s*(\\d{1,2})(?:st|nd|rd|th)?`, 'i');
+const weekTextOneMonthRegexp = new RegExp(`(${MONTH_NAMES})\\.?\\s*(\\d{1,2})(?:st|nd|rd|th)?\\s*${DASHES}\\s*(\\d{1,2})(?:st|nd|rd|th)?`, 'i');
 
 export function weekTextToWeek(weekText: string): Week {
     const numericMatch = weekTextNumericRegexp.exec(weekText);

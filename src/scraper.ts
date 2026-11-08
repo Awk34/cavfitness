@@ -103,31 +103,51 @@ export async function injectCustomStyles(page: Page): Promise<void> {
   }
 }
 
+const MISSION_COLUMN_SELECTOR =
+  ".elementor-column.elementor-col-25.elementor-top-column.elementor-element";
+
 export async function extractMissionDetails(
   page: Page,
   imageOutputPath: string = MISSION_IMAGE_FILE,
 ): Promise<MissionDetails> {
-  const missionTextSelector = await page
-    .locator("text/THE WEEK’S MISSION")
-    .waitHandle();
-  await missionTextSelector.tap();
+  try {
+    await page.waitForSelector(MISSION_COLUMN_SELECTOR);
+  } catch (error) {
+    throw new Error(
+      `Failed to locate weekly mission column selector "${MISSION_COLUMN_SELECTOR}" on ${page.url()} (page layout may have changed): ${error instanceof Error ? error.message : String(error)}`,
+      { cause: error },
+    );
+  }
 
-  const divs = await page.$$(
-    ".elementor-column.elementor-col-25.elementor-top-column.elementor-element",
-  );
+  const divs = await page.$$(MISSION_COLUMN_SELECTOR);
   const weeklyMissionDiv = divs[divs.length - 1];
-  assertExists(weeklyMissionDiv, "Weekly mission column element not found in page");
+  assertExists(
+    weeklyMissionDiv,
+    `Weekly mission column element ("${MISSION_COLUMN_SELECTOR}") not found on ${page.url()}`,
+  );
+
+  await weeklyMissionDiv.scrollIntoView();
 
   const weeklyMissionText =
-    (await weeklyMissionDiv.evaluate((el) =>
-      el.textContent
-        ?.trim()
+    (await weeklyMissionDiv.evaluate((el) => {
+      const rawText = (el as HTMLElement).innerText || el.textContent || "";
+      return rawText
+        .trim()
         .replaceAll(/[ \t]+/g, " ")
-        .replaceAll(/(\n +)+/g, "\n"),
-    )) || "";
+        .replaceAll(/(\n +)+/g, "\n");
+    })) || "";
   console.log(weeklyMissionText);
 
-  const week = weekTextToWeek(weeklyMissionText);
+  let week;
+  try {
+    week = weekTextToWeek(weeklyMissionText);
+  } catch (error) {
+    const preview = weeklyMissionText.replaceAll(/\s+/g, " ").slice(0, 200);
+    throw new Error(
+      `Failed to parse weekly mission date from extracted text (preview: "${preview}"): ${error instanceof Error ? error.message : String(error)}`,
+      { cause: error },
+    );
+  }
   const currentYear = new Date().getFullYear();
   const missionMondayFullDate = `${week.getStartDateString()}/${currentYear}`;
   console.log(`Mission's full start date: ${missionMondayFullDate}`);

@@ -45,6 +45,23 @@ const EXPECTED_AUG_SEPT_WEEK = new Week(
     Month.August, 31,
     Month.September, 7);
 
+const NOV_TEST_CASES = [
+    "NOVEMBER 9–15, 2026",
+    `THE CAV — WEEKLY MISSION
+YOUR WEEK.
+YOUR MISSION.
+Train for Life Philosophy
+Lift & Move Method
+NOVEMBER 9–15, 2026
+Pick your days. Reserve your classes. Your next win starts when you show up.
+MONDAY • NOV 9`,
+    "THE CAV — WEEKLY MISSIONYOUR WEEK.YOUR MISSION.Train for Life PhilosophyLift & Move MethodNOVEMBER 9–15, 2026Pick your days.",
+];
+
+const EXPECTED_NOV_WEEK = new Week(
+    Month.November, 9,
+    Month.November, 15);
+
 describe('dates', () => {
     test.each(JULY_TEST_CASES)(
         'should parse July week text %s',
@@ -56,6 +73,12 @@ describe('dates', () => {
         'should parse Aug/Sept week text %s',
         (weekText) => {
             expect(weekTextToWeek(weekText)).toEqual(EXPECTED_AUG_SEPT_WEEK);
+        });
+
+    test.each(NOV_TEST_CASES)(
+        'should parse Nov week text %s',
+        (weekText) => {
+            expect(weekTextToWeek(weekText)).toEqual(EXPECTED_NOV_WEEK);
         });
 });
 

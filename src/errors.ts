@@ -7,8 +7,130 @@ export const ERROR_ALERT_COOLDOWN_HOURS =
 
 export type ErrorKind = "transient" | "critical";
 
+const DOM_OR_PARSE_ERROR_PATTERN =
+  /\b(Locator\.|waitHandle|waitForSelector|Waiting for selector|Failed to locate|Cannot find selector|Weekly mission column element|Failed to parse|Neither date scheme matched)\b/i;
+
+function getErrorChainText(error: unknown): string {
+  const parts: string[] = [];
+  let current: unknown = error;
+  const seen = new Set<unknown>();
+  while (current && !seen.has(current)) {
+    seen.add(current);
+    if (current instanceof Error) {
+      parts.push(`${current.name}: ${current.message}`);
+      if (current.stack) {
+        parts.push(current.stack);
+      }
+      current = (current as Error & { cause?: unknown }).cause;
+    } else {
+      parts.push(String(current));
+      break;
+    }
+  }
+  return parts.join("\n");
+}
+
+function extractFirstAppFunction(stack?: string): string | null {
+  if (!stack) return null;
+  for (const line of stack.split("\n")) {
+    if (line.includes("node_modules") || line.includes("node:internal")) {
+      continue;
+    }
+    const match = /at\s+(?:async\s+)?([A-Za-z0-9_.$]+)\s+\(/.exec(line);
+    if (match && match[1]) {
+      return match[1];
+    }
+  }
+  return null;
+}
+
+export function describeError(error: unknown): string {
+  if (!error) return "Unknown error";
+  if (!(error instanceof Error)) return String(error);
+
+  const baseMessage = error.message || error.name || "Error";
+  const cause = (error as Error & { cause?: unknown }).cause;
+  if (!cause) {
+    return baseMessage;
+  }
+
+  const causeMessage =
+    cause instanceof Error ? cause.message || cause.name : String(cause);
+  const appFn =
+    (cause instanceof Error && extractFirstAppFunction(cause.stack)) ||
+    extractFirstAppFunction(error.stack);
+
+  if (causeMessage && !baseMessage.includes(causeMessage)) {
+    const locationSuffix = appFn ? ` in ${appFn}` : "";
+    return `${baseMessage} (caused by: ${causeMessage}${locationSuffix})`;
+  }
+
+  if (appFn && !baseMessage.includes(appFn)) {
+    return `${baseMessage} (in ${appFn})`;
+  }
+
+  return baseMessage;
+}
+
+export function getErrorDiagnosis(error: unknown): string {
+  if (!error) return "An unknown error occurred during scraping.";
+  const chainText = getErrorChainText(error);
+
+  if (
+    /\b(Failed to parse|Neither date scheme matched)\b/i.test(chainText)
+  ) {
+    return "The weekly mission text was extracted, but its date range could not be parsed. The date format on the website may have changed.";
+  }
+
+  if (DOM_OR_PARSE_ERROR_PATTERN.test(chainText)) {
+    return "DOM element or selector was not found on the page. The website layout or wording may have changed.";
+  }
+
+  if (isTransientError(error)) {
+    return "Page navigation or network connection timed out while reaching the website.";
+  }
+
+  return "An unexpected application error occurred during scraping.";
+}
+
+export function formatErrorStack(error: unknown): string {
+  const blocks: string[] = [];
+  let current: unknown = error;
+  const seen = new Set<unknown>();
+  let isFirst = true;
+
+  while (current && !seen.has(current)) {
+    seen.add(current);
+    if (current instanceof Error) {
+      const text = current.stack || `${current.name}: ${current.message}`;
+      blocks.push(isFirst ? text : `Caused by: ${text}`);
+      current = (current as Error & { cause?: unknown }).cause;
+    } else {
+      blocks.push(isFirst ? String(current) : `Caused by: ${String(current)}`);
+      break;
+    }
+    isFirst = false;
+  }
+
+  return blocks.join("\n\n");
+}
+
+function escapeHtml(text: string): string {
+  return text
+    .replaceAll("&", "&amp;")
+    .replaceAll("<", "&lt;")
+    .replaceAll(">", "&gt;")
+    .replaceAll('"', "&quot;")
+    .replaceAll("'", "&#39;");
+}
+
 export function isTransientError(error: unknown): boolean {
   if (!error) return false;
+  const chainText = getErrorChainText(error);
+  if (DOM_OR_PARSE_ERROR_PATTERN.test(chainText)) {
+    return false;
+  }
+
   const name = error instanceof Error ? error.name : "";
   const msg = error instanceof Error ? error.message : String(error);
   return (
@@ -71,7 +193,7 @@ export class ErrorTracker {
     now: Date = new Date(),
   ): FailureRecordResult {
     const errorKind = getErrorKind(error);
-    const errorMessage = error instanceof Error ? error.message : String(error);
+    const errorMessage = describeError(error);
     const errorName = error instanceof Error ? error.name : typeof error;
 
     this.state.consecutiveFailures += 1;
@@ -173,8 +295,9 @@ export function createErrorMailOptions(
   addresses?: ErrorMailAddresses,
   firstFailureDate: Date | null = errorState.firstFailureDate,
 ): SendMailOptions {
-  const errorMessage = error instanceof Error ? error.message : String(error);
-  const errorStack = error instanceof Error ? error.stack : "";
+  const errorMessage = describeError(error);
+  const diagnosis = getErrorDiagnosis(error);
+  const errorStack = error instanceof Error ? formatErrorStack(error) : "";
   const firstFailure = firstFailureDate
     ? firstFailureDate.toISOString()
     : new Date().toISOString();
@@ -191,11 +314,12 @@ export function createErrorMailOptions(
     html: `
             <h2>Cav Fitness Scraper Error</h2>
             <p><strong>Error Type:</strong> ${errorKind.toUpperCase()}</p>
+            <p><strong>Summary:</strong> ${escapeHtml(diagnosis)}</p>
             <p><strong>Consecutive Failures:</strong> ${consecutiveFailures}</p>
             <p><strong>Streak Started:</strong> ${firstFailure}</p>
             <p><strong>Timestamp:</strong> ${new Date().toISOString()}</p>
-            <p><strong>Error:</strong> ${errorMessage}</p>
-            ${errorStack ? `<pre style="background: #f4f4f4; padding: 12px; border-radius: 4px; overflow-x: auto; font-family: monospace;">${errorStack}</pre>` : ""}
+            <p><strong>Error:</strong> ${escapeHtml(errorMessage)}</p>
+            ${errorStack ? `<pre style="background: #f4f4f4; padding: 12px; border-radius: 4px; overflow-x: auto; font-family: monospace;">${escapeHtml(errorStack)}</pre>` : ""}
         `,
   };
 }

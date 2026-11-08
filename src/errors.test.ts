@@ -1,9 +1,12 @@
 import { beforeEach, describe, expect, test } from "@jest/globals";
 import {
   createErrorMailOptions,
+  describeError,
   ERROR_ALERT_COOLDOWN_HOURS,
   ERROR_ALERT_THRESHOLD,
   errorState,
+  formatErrorStack,
+  getErrorDiagnosis,
   isTransientError,
   recordFailure,
   recordSuccess,
@@ -21,10 +24,55 @@ describe("isTransientError", () => {
     expect(isTransientError(new Error("connect ECONNREFUSED"))).toBe(true);
   });
 
-  test("identifies non-transient errors as critical", () => {
+  test("identifies non-transient errors (including selector/locator timeouts) as critical", () => {
     expect(isTransientError(new Error("Cannot find selector .elementor-col"))).toBe(false);
     expect(isTransientError(new Error("Failed to parse mission text"))).toBe(false);
     expect(isTransientError(new TypeError("Cannot read properties of undefined"))).toBe(false);
+
+    const cause = new Error("Locator.waitHandle");
+    const locatorTimeout = new Error("Timed out after waiting 30000ms", { cause });
+    locatorTimeout.name = "TimeoutError";
+    expect(isTransientError(locatorTimeout)).toBe(false);
+
+    const selectorTimeout = new Error(
+      'Failed to locate weekly mission column selector ".elementor-col-25": Waiting for selector failed: 30000ms exceeded',
+    );
+    selectorTimeout.name = "TimeoutError";
+    expect(isTransientError(selectorTimeout)).toBe(false);
+  });
+});
+
+describe("describeError, getErrorDiagnosis, and formatErrorStack", () => {
+  test("enriches generic timeout errors with cause and application function", () => {
+    const cause = new Error("Locator.waitHandle");
+    cause.stack = [
+      "Error: Locator.waitHandle",
+      "    at NodeLocator.waitHandle (/app/node_modules/puppeteer-core/locators.js:433:23)",
+      "    at extractMissionDetails (/app/scraper.js:118:10)",
+    ].join("\n");
+
+    const timeoutErr = new Error("Timed out after waiting 30000ms", { cause });
+    timeoutErr.name = "TimeoutError";
+
+    expect(describeError(timeoutErr)).toBe(
+      "Timed out after waiting 30000ms (caused by: Locator.waitHandle in extractMissionDetails)",
+    );
+    expect(getErrorDiagnosis(timeoutErr)).toContain(
+      "DOM element or selector was not found on the page",
+    );
+
+    const formattedStack = formatErrorStack(timeoutErr);
+    expect(formattedStack).toContain("Caused by: Error: Locator.waitHandle");
+    expect(formattedStack).toContain("at extractMissionDetails (/app/scraper.js:118:10)");
+  });
+
+  test("diagnoses date parsing failures accurately", () => {
+    const parseErr = new Error(
+      'Failed to parse weekly mission date from extracted text: Neither date scheme matched: "foo"',
+    );
+    expect(getErrorDiagnosis(parseErr)).toContain(
+      "date range could not be parsed",
+    );
   });
 });
 
@@ -162,6 +210,23 @@ describe("createErrorMailOptions", () => {
     expect(mailOptions.subject).toContain("[critical]");
     expect(mailOptions.subject).not.toContain("consecutive errors");
     expect(mailOptions.html).toContain("CRITICAL");
+  });
+
+  test("includes cause chain and HTML-escapes angle brackets in stack trace", () => {
+    const cause = new Error("Locator.waitHandle");
+    cause.stack = "Error: Locator.waitHandle\n    at extractMissionDetails (/app/scraper.js:118:10)";
+    const error = new Error("Timed out after waiting 30000ms", { cause });
+    error.stack = "TimeoutError: Timed out after waiting 30000ms\n    at AsyncAction2.<anonymous> (/app/rxjs.js:4863:24)";
+
+    const mailOptions = createErrorMailOptions(error, 1, "critical");
+    expect(mailOptions.subject).toContain(
+      "Timed out after waiting 30000ms (caused by: Locator.waitHandle in extractMissionDetails)",
+    );
+    expect(mailOptions.html).toContain("Summary:");
+    expect(mailOptions.html).toContain("DOM element or selector was not found on the page");
+    expect(mailOptions.html).toContain("AsyncAction2.&lt;anonymous&gt;");
+    expect(mailOptions.html).toContain("Caused by: Error: Locator.waitHandle");
+    expect(mailOptions.html).toContain("at extractMissionDetails (/app/scraper.js:118:10)");
   });
 });
 
