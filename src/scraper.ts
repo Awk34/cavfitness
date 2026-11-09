@@ -1,7 +1,7 @@
 import * as fs from "node:fs";
 import { readFile } from "node:fs/promises";
 import * as path from "node:path";
-import { Browser, Page, PuppeteerLaunchOptions } from "puppeteer";
+import { Browser, ElementHandle, Page, PuppeteerLaunchOptions } from "puppeteer";
 import puppeteerExtra from "puppeteer-extra";
 import StealthPlugin from "puppeteer-extra-plugin-stealth";
 import sharp from "sharp";
@@ -103,28 +103,61 @@ export async function injectCustomStyles(page: Page): Promise<void> {
   }
 }
 
-const MISSION_COLUMN_SELECTOR =
-  ".elementor-column.elementor-col-25.elementor-top-column.elementor-element";
+export async function findMissionElement(
+  page: Page,
+): Promise<ElementHandle<Element>> {
+  try {
+    const handle = await page.waitForFunction(
+      () => {
+        const hasWeekdays = (text: string): boolean =>
+          /\bmonday\b/i.test(text) &&
+          /\btuesday\b/i.test(text) &&
+          /\bwednesday\b/i.test(text) &&
+          /\bthursday\b/i.test(text) &&
+          /\bfriday\b/i.test(text);
+
+        const candidates = Array.from(
+          document.querySelectorAll<HTMLElement>("body *"),
+        ).filter((el) => hasWeekdays(el.innerText || el.textContent || ""));
+
+        if (candidates.length === 0) {
+          return null;
+        }
+
+        const withHeader = candidates.filter((el) =>
+          /\b(mission|train for life)\b/i.test(
+            el.innerText || el.textContent || "",
+          ),
+        );
+        const deepest =
+          withHeader.length > 0
+            ? withHeader[withHeader.length - 1]
+            : candidates[candidates.length - 1];
+
+        return deepest.closest<HTMLElement>(".elementor-column") ?? deepest;
+      },
+      { timeout: 30000 },
+    );
+
+    const element = handle.asElement() as ElementHandle<Element> | null;
+    assertExists(
+      element,
+      `Weekly mission container element not found on ${page.url()}`,
+    );
+    return element;
+  } catch (error) {
+    throw new Error(
+      `Failed to locate weekly mission section (expected weekday schedule Monday–Friday) on ${page.url()} (page layout or content may have changed): ${error instanceof Error ? error.message : String(error)}`,
+      { cause: error },
+    );
+  }
+}
 
 export async function extractMissionDetails(
   page: Page,
   imageOutputPath: string = MISSION_IMAGE_FILE,
 ): Promise<MissionDetails> {
-  try {
-    await page.waitForSelector(MISSION_COLUMN_SELECTOR);
-  } catch (error) {
-    throw new Error(
-      `Failed to locate weekly mission column selector "${MISSION_COLUMN_SELECTOR}" on ${page.url()} (page layout may have changed): ${error instanceof Error ? error.message : String(error)}`,
-      { cause: error },
-    );
-  }
-
-  const divs = await page.$$(MISSION_COLUMN_SELECTOR);
-  const weeklyMissionDiv = divs[divs.length - 1];
-  assertExists(
-    weeklyMissionDiv,
-    `Weekly mission column element ("${MISSION_COLUMN_SELECTOR}") not found on ${page.url()}`,
-  );
+  const weeklyMissionDiv = await findMissionElement(page);
 
   await weeklyMissionDiv.scrollIntoView();
 

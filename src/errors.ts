@@ -8,7 +8,7 @@ export const ERROR_ALERT_COOLDOWN_HOURS =
 export type ErrorKind = "transient" | "critical";
 
 const DOM_OR_PARSE_ERROR_PATTERN =
-  /\b(Locator\.|waitHandle|waitForSelector|Waiting for selector|Failed to locate|Cannot find selector|Weekly mission column element|Failed to parse|Neither date scheme matched)\b/i;
+  /\b(Locator\.|waitHandle|waitForSelector|waitForFunction|Waiting for selector|Failed to locate|Cannot find selector|Weekly mission (?:column|container) element|Failed to parse|Neither date scheme matched)\b/i;
 
 function getErrorChainText(error: unknown): string {
   const parts: string[] = [];
